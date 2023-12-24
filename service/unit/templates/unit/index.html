@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://js.stripe.com/v3/"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <title>{{title}}</title>
+</head>
+
+<body>
+    {% if user %}
+    <h2>Привет, {{ user }}</h2>
+    {% endif %}
+    <div align="center">
+        <h3>Товар</h3>
+        <h4>{{ object.name }}</h4>
+        <i>{{ object.description }}</i> </br></br>
+        <input type="number" id="quantity" name="quantity" value="1" min="1"> </br>
+        <fieldset>
+            <legend> Выбери валюту</legend>
+            <div>
+                <input type="radio" id="usd" name="money" value="usd-{{ usd_price }}" />
+                <label for="usd">{{ usd_price }} USD</label>
+            </div>
+            <div>
+                <input type="radio" id="eur" name="money" value="eur-{{ eur_price }}" />
+                <label for="eur">{{ eur_price }} EUR</label>
+            </div>
+            <div>
+                <input type="radio" id="rub" name="money" value="rub-{{ rub_price }}" />
+                <label for="rub">{{ rub_price }} RU</label>
+            </div>
+        </fieldset>
+        <hr>
+        <button class="buy-button btn btn-primary" data-item-id="{{ object.id }}">Buy</button>
+        {% if user %} {% csrf_token %} <button class="add-button btn btn-danger" order-item-id="{{ object.id }}">В
+            заказ</button>{% endif %}
+
+    </div>
+    <script>
+        // Ожидаем загрузки документа
+        document.addEventListener('DOMContentLoaded', function () {
+            // Обработчик события нажатия на кнопку "Buy"
+            document.querySelector('.buy-button').addEventListener('click', function () {
+                let itemId = this.getAttribute('data-item-id');
+                let currentHost = window.location.origin;
+                let quantity = document.getElementById('quantity').value;
+                let moneyRadioButton = document.querySelector('input[name="money"]:checked');
+                let money;
+
+                if (moneyRadioButton) {
+                    money = moneyRadioButton.value;
+                    fetch(currentHost + '/unit/buy/' + itemId + '/?quantity=' + quantity + '&money=' + money, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                        .then(function (response) {
+                            return response.json();
+                        })
+                        .then(function (session) {
+                            // Вызываем функцию для перенаправления на Checkout страницу
+                            redirectToCheckout(session);
+                        })
+                        .catch(function (error) {
+                            // Обработка ошибки
+                            console.error('Error:', error);
+                        });
+                } else {
+                    // Если радиокнопка не выбрана
+                    alert('Выберите валюту');
+                }
+            });
+
+            document.querySelector('.add-button').addEventListener('click', function () {
+                let itemId = this.getAttribute('order-item-id');
+                let currentHost = window.location.origin;
+                let quantity = document.getElementById('quantity').value;
+                let csrfToken = document.getElementsByName('csrfmiddlewaretoken')[0].value;
+                let moneyRadioButton = document.querySelector('input[name="money"]:checked');
+                let money;
+
+                if (moneyRadioButton) {
+                    money = moneyRadioButton.value;
+                    fetch('{% url "to-order" %}', {
+                        method: 'POST',
+                        body: JSON.stringify({'item_id': itemId, "quantity": quantity, "money": money}),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                        }
+                    })
+                        .then(function (response) {
+                            alert('Товар добавлен в заказ !!!');  // Переместите эту строку сюда
+                            return response.json();
+                        })
+                        .catch(function (error) {
+                            // Обработка ошибки
+                            console.error('Error:', error);
+                        });
+                } else {
+                    // Если радиокнопка не выбрана
+                    alert('Выбери валюту!!!')
+                }
+            });
+
+            // Функция перенаправления на Checkout страницу
+            function redirectToCheckout(data) {
+                let stripe = Stripe(data.public_key);
+                stripe.redirectToCheckout({sessionId: data.session_id})
+                    .then(function (result) {
+                        if (result.error) {
+                            alert(result.error.message);
+                        }
+                    });
+            }
+        });
+    </script>
+
+</body>
+
+</html>

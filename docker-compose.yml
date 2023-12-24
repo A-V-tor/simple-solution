@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    command: gunicorn service.wsgi:application --bind 0.0.0.0:8000
+    container_name: web
+    expose:
+      - 8000
+    env_file:
+      - ./.env
+    volumes:
+      - static:/app/staticfiles
+
+  nginx:
+    build: ./nginx
+    ports:
+      - 80:80
+    container_name: nginx
+    depends_on:
+      - web
+    volumes:
+      - static:/app/staticfiles
+
+volumes:
+  static:
