@@ -37,7 +37,7 @@ USD_EXCHANGE_RATE = 100
 stripe.api_key = SECRET_API_STRIPE
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', HOST]
 
